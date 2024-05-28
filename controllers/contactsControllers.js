@@ -15,16 +15,12 @@ export const getAllContacts = async (req, res, next) => {
 export const getOneContact = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const contact = await Contact.findById(id);
+    const contact = await Contact.findOne({ _id: id, owner: req.user.id });
 
     if (!contact) {
       throw HttpError(404, "Contact not found");
     }
-
-    if (contact.owner.toString() !== req.user.id) {
-      throw HttpError(404, "Contact not found");
-    }
-
+   
     res.status(200).json(contact);
   } catch (error) {
     next(error);
@@ -72,15 +68,16 @@ export const updateContact = async (req, res, next) => {
     if (!req.body || Object.keys(req.body).length === 0)
       throw HttpError(400, "Body must have at least one field");
 
-    const updatedContact = await Contact.findByIdAndUpdate(id, req.body, {
-      new: true,
-    });
-    if (updatedContact.owner.toString() !== req.user.id) {
-      throw HttpError(404, "Contact not found");
-    }
-
+    const updatedContact = await Contact.findOneAndUpdate(
+      { _id: id, owner: req.user.id },
+      req.body,
+      {
+        new: true,
+      }
+    );
+   
     if (!updatedContact) throw HttpError(404);
-    res.status(200).json(updatedContact);
+    res.status(200).json(updatedContact, "Contact not found");
   } catch (error) {
     next(error);
   }
@@ -96,15 +93,13 @@ export const updateStatusContact = async (req, res, next) => {
         "Body must have an object with key 'favorite' and its value boolean"
       );
 
-    const updatedContact = await Contact.findByIdAndUpdate(id, req.body, {
-      new: true,
-    });
+    const updatedContact = await Contact.findOneAndUpdate(
+      { _id: id, owner: req.user.id },
+      req.body,
+      { new: true }
+    );
 
-    if (updatedContact.owner.toString() !== req.user.id) {
-      throw HttpError(404, "Contact not found");
-    }
-
-    if (!updatedContact) throw HttpError(404);
+    if (!updatedContact) throw HttpError(404, "Contact not found");
     res.status(200).json(updatedContact);
   } catch (error) {
     next(error);
