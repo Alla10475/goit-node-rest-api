@@ -15,7 +15,7 @@ app.use(morgan("tiny"));
 app.use(cors());
 app.use(express.json());
 
-app.use("/users", authRoutes);
+app.use("/api/users", authRoutes);
 app.use("/api/contacts", auth, contactsRoutes);
 
 app.use((_, res) => {
