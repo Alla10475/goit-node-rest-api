@@ -1,5 +1,9 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import * as fs from "node:fs/promises";
+import path from "node:path";
+import gravatar from "gravatar";
+import Jimp from "jimp";
 
 import User from "../models/user.js";
 
@@ -14,7 +18,13 @@ export const userRegister = async (req, res, next) => {
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
-    const newUser = await User.create({ email, password: passwordHash });
+    const avatarURL = gravatar.url(email);
+
+    const newUser = await User.create({
+      email,
+      password: passwordHash,
+      avatarURL,
+    });
 
     res.status(201).json({
       user: {
@@ -61,22 +71,25 @@ export const userLogin = async (req, res, next) => {
 
 export const userLogout = async (req, res) => {
   try {
-      const user = await User.findByIdAndUpdate(req.user.id, { token: null }, { new: true });
-      
-      if (!user) {
-          res.status(401).send({ message: "Not authorized" });
-      }
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      { token: null },
+      { new: true }
+    );
+
+    if (!user) {
+      res.status(401).send({ message: "Not authorized" });
+    }
 
     res.status(204).end();
   } catch (error) {
     next(error);
-  };
+  }
 };
 
 export const userCurrent = async (req, res) => {
   const { id } = req.user;
   const user = await User.findById(id);
-  console.log(req.user);
   res.json({
     email: user.email,
     subscription: user.subscription,
@@ -85,7 +98,6 @@ export const userCurrent = async (req, res) => {
 
 export const updateSubscr = async (req, res, next) => {
   try {
-   
     const user = await User.findByIdAndUpdate(req.user.id, req.body, {
       new: true,
     });
@@ -93,6 +105,27 @@ export const updateSubscr = async (req, res, next) => {
       .status(200)
       .json({ email: user.email, subscription: user.subscription })
       .end();
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const changeAvatar = async (req, res, next) => {
+  try {
+    const avatarSize = await Jimp.read(req.file.path);
+    await avatarSize.resize(250, 250).writeAsync(req.file.path);
+
+    const newPath = path.resolve("public", "avatars", req.file.filename);
+
+    await fs.rename(req.file.path, newPath);
+
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      { avatarURL: `/avatars/${req.file.filename}` },
+      { new: true }
+    );
+
+    res.status(200).json({ avatarURL: user.avatarURL });
   } catch (error) {
     next(error);
   }
