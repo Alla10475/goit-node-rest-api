@@ -121,7 +121,10 @@ export const changeAvatar = async (req, res, next) => {
 
     const user = await User.findByIdAndUpdate(
       req.user.id,
-      { avatarURL: `/avatars/${req.file.filename}` },
+      {
+        avatarURL: path.join("avatars", req.file.filename),
+      },
+
       { new: true }
     );
 
